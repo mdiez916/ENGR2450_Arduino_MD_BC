@@ -2,11 +2,11 @@
 
 //Setup LCD Screen
 #include <LiquidCrystal_I2C.h>
-LiquidCrystal_I2C lcd_0x27 (0x27, 16, 2); // set the LCD address for a 20 chars and 4 line display
-LiquidCrystal_I2C lcd_0x3F (0x3F, 16, 2); // set the LCD address for a 20 chars and 4 line display
+LiquidCrystal_I2C lcd_0x27 (0x27, 16, 2);  // set the LCD address for a 20 chars and 4 line display
+LiquidCrystal_I2C lcd_0x3F (0x3F, 16, 2);  // set the LCD address for a 20 chars and 4 line display
 LiquidCrystal_I2C lcd = lcd_0x27;
-byte disp_freq = 2; // in hz
-int disp_delay = 1000 / disp_freq;
+byte disp_freq = 2;  // in hz
+int  disp_delay = 1000 / disp_freq;
 long disp_time = 0;
 
 // Setup I/O pins
@@ -16,9 +16,9 @@ int B1_pin = A1;
 int B2_pin = A2;
 int B3_pin = A3;
 
-int A[3][3] = {
+float A[3][3] = {
   {15, -3, -1},
-  {-3, 18, -6},
+  { -3, 18, -6},
   { -4, -1, 12}
 };
 
@@ -38,11 +38,11 @@ void setup()
   byte address = 63; // This is 0x3F
   Wire.beginTransmission(address);
   byte error = Wire.endTransmission();
-  if (error == 0) // this means there is a 0x3F - if it is there, assume it is the only one there
+  if (error == 0)  // this means there is a 0x3F - if it is there, assume it is the only one there
     lcd = lcd_0x3F;
 
   // Initialize LCD
-  // Serial.println(lcd.begin(20, 4));
+  //  Serial.println(lcd.begin(20, 4));
   lcd.init ();
   lcd.begin ( 16, 2 );
   lcd.setBacklight(HIGH);
@@ -55,17 +55,18 @@ void setup()
   digitalWrite(buzzer_pin, 1);
   delay(100);
   digitalWrite(buzzer_pin, 0);
-  delay(2500); // wait 2.5sec before starting...
+  delay(2500);  // wait 2.5sec before starting...
   lcd.clear();
 }
+
 void loop()
 {
-  static bool disp_screen = 0; // this is to pick which info to display...
+  static bool disp_screen = 0;  // this is to pick which info to display...
   if (disp_screen == 0) // this means it is on the "b" screen
   {
     // These commands "map", the inputs (integers from 0 to 1023) to values between 0 and 5000.
-    // This means an input of 0 will give a value of 0, an input of 1023 will give a value of
-    // 5000, and linearly in-between. This will make it somewhat "jumpy", as you are taking
+    // This means an input of 0 will give a value of 0, an input of 1023 will give a value of 
+    // 5000, and linearly in-between.  This will make it somewhat "jumpy", as you are taking 
     // 1024 steps to map to 5000 values - if you want a smoother option, map the entire input
     // range (0 to 1023) to something like 3500 to 4000 - this will make it easier to select
     // the exact "B" value you want.
@@ -73,42 +74,47 @@ void loop()
     b[1] = map(analogRead(B2_pin), 0, 1023, 0, 5000);
     b[2] = map(analogRead(B3_pin), 0, 1023, 0, 5000);
   }
-  else // displaying the "c" screen
+  else  // displaying the "c" screen
   {
+    gaussSeidel(A,b,c,1.0,0.01);
+    Serial.print(c[0]);
+
     // This is where you would call your gauss seidel function
   }
+
   if (millis() > disp_time)
   {
     disp_time = disp_time + disp_delay;
     if (disp_screen == 0)
     {
       lcd.setCursor (0, 0);
-      lcd.print("B1: ");
+      lcd.print("B1:             ");
       lcd.setCursor(3, 0);
       lcd.print(b[0]);
       lcd.setCursor(8, 0);
       lcd.print("B2:");
       lcd.print(b[1]);
       lcd.setCursor (0, 1);
-      lcd.print("B3: ");
+      lcd.print("B3:             ");
       lcd.setCursor(3, 1);
       lcd.print(b[2]);
     }
-  else if (disp_screen == 1)
-  {
-    lcd.setCursor (0, 0);
-    lcd.print("C1: ");
-    lcd.setCursor(3, 0);
-    lcd.print(c[0]);
-    lcd.setCursor(8, 0);
-    lcd.print("C2:");
-    lcd.print(c[1]);
-    lcd.setCursor (0, 1);
-    lcd.print("C3: ");
-    lcd.setCursor(3, 1);
-    lcd.print(c[2]);
+    else if (disp_screen == 1)
+    {
+      lcd.setCursor (0, 0);
+      lcd.print("C1:             ");
+      lcd.setCursor(3, 0);
+      lcd.print(c[0]);
+      lcd.setCursor(8, 0);
+      lcd.print("C2:");
+      lcd.print(c[1]);
+      lcd.setCursor (0, 1);
+      lcd.print("C3:             ");
+      lcd.setCursor(3, 1);
+      lcd.print(c[2]);
+    }
   }
-  }
+
   if (!digitalRead(button_pin))
   {
     digitalWrite(buzzer_pin, 1);
@@ -116,5 +122,81 @@ void loop()
     digitalWrite(buzzer_pin, 0);
     delay(100);
     disp_screen = !disp_screen;
+  }
+}
+// void gaussSeidel(float A[3][3], int b[3], float c[3], float es)
+// {
+//   const int max_iter = 500;
+//   float x_old[3] = {0, 0, 0};  // initial guess
+//   float x_new[3] = {0, 0, 0};
+
+//   for (int iter = 0; iter < max_iter; iter++) {
+//     for (int i = 0; i < 3; i++) {
+//       float sum = 0;
+//       for (int j = 0; j < 3; j++) {
+//         if (j != i) {
+//           sum += A[i][j] * x_new[j];
+//         }
+//       }
+//       x_new[i] = (b[i] - sum) / A[i][i];
+//     }
+
+//     // Compute approximate relative error
+//     float max_error = 0;
+//     for (int i = 0; i < 3; i++) {
+//       float denom = (abs(x_new[i]) > 1e-6) ? abs(x_new[i]) : 1e-6;
+//       float ea = abs((x_new[i] - x_old[i]) / denom) * 100;
+//       if (ea > max_error) {
+//         max_error = ea;
+//       }
+//       x_old[i] = x_new[i];
+//     }
+
+//     if (max_error < es) {
+//       break;
+//     }
+//   }
+
+//   // Copy results into c array
+//   for (int i = 0; i < 3; i++) {
+//     c[i] = x_new[i];
+//   }
+// }
+
+void gaussSeidel(float A[3][3], int b[3], float c[3], float lambda, float es)
+{
+  const int max_iter = 500;
+  float x_old[3] = {0, 0, 0};  // initial guess
+  float x_new[3] = {0, 0, 0};
+
+  for (int iter = 0; iter < max_iter; iter++) {
+    for (int i = 0; i < 3; i++) {
+      float sum = 0;
+
+      //x_new[i] = (1 - lambda) * x_old[i] + ( (b[i] - sum) / A[i][i] );
+      x_new[1] = (b[1] - A[1][2] * x_new[2] - A[1][3]*x_new[3]) / A[1][1];
+      x_new[2] = (b[2] - A[2][1] * x_new[1] - A[2][3]*x_new[3]) / A[2][2];
+      x_new[3] = (b[3] - A[3][1] * x_new[1] - A[3][2]*x_new[2]) / A[3][3];
+    }
+
+    // Compute approximate relative error
+    float max_error = 0;
+    for (int i = 0; i < 3; i++) {
+      float denom = (abs(x_new[i]) > 1e-6) ? abs(x_new[i]) : 1e-6;  // avoid division by zero
+      float ea = abs((x_new[i] - x_old[i]) / denom) * 100;
+      if (ea > max_error) {
+        max_error = ea;
+      }
+      x_old[i] = x_new[i];  // update for next iteration
+    }
+
+    if (max_error < es) {
+      break;
+    }
+  }
+
+  // Copy result into c array
+  for (int i = 0; i < 3; i++) {
+    c[i] = x_new[i];
   }
 }
